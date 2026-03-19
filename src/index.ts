@@ -8,7 +8,8 @@ import cors from "cors"
 
 
 const app = express();
-app.use(express.json());
+app.use(express.json()); // for JSON APIs
+app.use(express.urlencoded({ extended: true })); // 🔥 for Twilio
 app.use(cors())
 
 app.use("/api", router)
