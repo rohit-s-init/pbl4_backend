@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    // ✅ Output setup
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    // ✅ Node environment
+    "module": "NodeNext",
+    "target": "ES2020",
+    "moduleResolution": "NodeNext",
+    "types": ["node"],
+
+    // ✅ Interop
+    "esModuleInterop": true,
+
+    // ✅ Strictness
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    // ✅ Clean build
+    "skipLibCheck": true,
+    "sourceMap": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}

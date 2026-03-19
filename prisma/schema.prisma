@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  phone     String    @unique
+  email     String?
+
+  schedules Schedule[]
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Schedule {
+  id        Int      @id @default(autoincrement())
+  message   String
+  time      String   // "08:00" format
+  label     String   // Morning / Night
+  isActive  Boolean  @default(true)
+
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+
+  calls     Call[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Call {
+  id          Int       @id @default(autoincrement())
+  scheduleId  Int
+  schedule    Schedule  @relation(fields: [scheduleId], references: [id])
+
+  timestamp   DateTime
+  status      CallStatus
+  twilioSid   String?
+
+  responses   Response[]
+
+  createdAt   DateTime  @default(now())
+}
+
+model Response {
+  id                 Int      @id @default(autoincrement())
+  callId             Int
+  call               Call     @relation(fields: [callId], references: [id])
+
+  speechText         String
+  interpretedIntent  Intent
+  timestamp          DateTime
+
+  createdAt          DateTime @default(now())
+}
+
+enum CallStatus {
+  completed
+  failed
+  pending
+}
+
+enum Intent {
+  YES
+  NO
+  UNKNOWN
+}
