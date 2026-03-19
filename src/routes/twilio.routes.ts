@@ -47,10 +47,11 @@ router.post("/call", async (req, res) => {
     });
 
     // Save Twilio SID
-    await prisma.call.update({
+    const update = await prisma.call.update({
       where: { id: callRecord.id },
       data: { twilioSid: call.sid },
     });
+    console.log(update);
 
     return res.json({ success: true, callSid: call.sid });
 
@@ -103,8 +104,13 @@ router.post("/voice", async (req, res) => {
 // =======================
 router.post("/gather", async (req, res) => {
   try {
+
+    console.log("inside the gather function");
+
     const { callId } = req.query;
     const speech = req.body.SpeechResult || "";
+
+    console.log("the speech is "+speech);
 
     let intent: "YES" | "NO" | "UNKNOWN" = "UNKNOWN";
 
