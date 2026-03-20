@@ -81,13 +81,15 @@ router.post("/voice", async (req, res) => {
 
     // Gather speech input
     twiml.gather({
-      // input: "speech",
+      input: ["dtmf"],
+      numDigits: 1,
       action: `/twilio/gather?callId=${callId}`,
       method: "POST",
       timeout: 5,
-      speechTimeout: "auto",
-    }).say("Please say yes if you have taken your medicine, or no if not.");
+    }).say("Press 1 if you have taken your medicine, or press 2 if not.");
 
+    // Optional fallback if no input
+    twiml.say("No input received. Goodbye.");
     twiml.hangup();
 
     res.type("text/xml");
@@ -108,19 +110,32 @@ router.post("/gather", async (req, res) => {
     console.log("inside the gather function");
 
     const { callId } = req.query;
-    const speech = req.body.SpeechResult || "";
+    const digit = req.body.Digits;
 
-    console.log("the speech is " + speech);
+    if (!digit || (digit !== "1" && digit !== "2")) {
+      const twiml = new VoiceResponse();
+
+      twiml.say("Invalid input. Please press 1 for yes or 2 for no.");
+
+      twiml.gather({
+        input: ["dtmf"],
+        numDigits: 1,
+        action: `/twilio/gather?callId=${callId}`,
+        method: "POST",
+      });
+
+      return res.type("text/xml").send(twiml.toString());
+    }
 
     let intent: "YES" | "NO" | "UNKNOWN" = "UNKNOWN";
 
-    if (speech.toLowerCase().includes("yes")) intent = "YES";
-    else if (speech.toLowerCase().includes("no")) intent = "NO";
+    if (digit === "1") intent = "YES";
+    else if (digit === "2") intent = "NO";
 
     await prisma.response.create({
       data: {
         callId: Number(callId),
-        speechText: speech,
+        speechText: intent,
         interpretedIntent: intent,
         timestamp: new Date(),
       },
@@ -180,7 +195,7 @@ router.get("/avaliablecalls", async (req, res) => {
       success: true,
       balance: data.balance,
       currency: data.currency,
-      callsAvaliable: parseFloat(data.balance)/costPerCall
+      callsAvaliable: parseFloat(data.balance) / costPerCall
     })
   } catch (error) {
     console.error('Error fetching balance:', error);
