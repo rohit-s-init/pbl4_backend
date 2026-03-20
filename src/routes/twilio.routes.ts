@@ -81,7 +81,7 @@ router.post("/voice", async (req, res) => {
 
     // Gather speech input
     twiml.gather({
-    // input: "speech",
+      // input: "speech",
       action: `/twilio/gather?callId=${callId}`,
       method: "POST",
       timeout: 5,
@@ -110,7 +110,7 @@ router.post("/gather", async (req, res) => {
     const { callId } = req.query;
     const speech = req.body.SpeechResult || "";
 
-    console.log("the speech is "+speech);
+    console.log("the speech is " + speech);
 
     let intent: "YES" | "NO" | "UNKNOWN" = "UNKNOWN";
 
@@ -164,5 +164,27 @@ router.post("/status", async (req, res) => {
     return res.sendStatus(500);
   }
 });
+
+router.get("/avaliablecalls", async (req, res) => {
+
+  const accountSid = process.env.ACCOUNT_SID;
+  const authToken = process.env.AUTH_TOKEN;
+
+  const client = twilio(accountSid, authToken);
+
+  try {
+    const data = await client.balance.fetch();
+    console.log(`Your account balance is ${data.balance} ${data.currency}.`);
+    const costPerCall = 0.05;
+    res.json({
+      success: true,
+      balance: data.balance,
+      currency: data.currency,
+      callsAvaliable: parseFloat(data.balance)/costPerCall
+    })
+  } catch (error) {
+    console.error('Error fetching balance:', error);
+  }
+})
 
 export default router;
