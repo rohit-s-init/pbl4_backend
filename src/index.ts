@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { prisma } from "./lib/prisma.js"
 import router from "./routes/routes.js";
 import cors from "cors"
+import { sendOtp } from "./routes/twilio.routes.js";
 
 
 
@@ -23,8 +24,6 @@ app.get("/webhooktest", (req, res) => {
     res.status(200).send("pass");
 
 })
-
-
 
 
 app.listen(8080, () => {

@@ -12,6 +12,15 @@ const client = twilio(
 
 const VoiceResponse = twilio.twiml.VoiceResponse;
 
+export function sendOtp(num: string, message: string) {
+  return client.messages
+    .create({
+      body: message,
+      from: '+17018952445',
+      to: num
+    })
+}
+
 // =======================
 // 📞 TRIGGER CALL
 // =======================
