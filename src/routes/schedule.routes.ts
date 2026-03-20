@@ -1,6 +1,7 @@
 import express from "express";
 import { prisma } from "../lib/prisma.js";
 import jwt from "jsonwebtoken";
+import { scheduleCall } from "../service/cron.js";
 
 const router = express.Router();
 
@@ -60,6 +61,8 @@ router.post("/", async (req, res) => {
       });
     }
 
+
+
     const schedule = await prisma.schedule.create({
       data: {
         message,
@@ -69,6 +72,20 @@ router.post("/", async (req, res) => {
         userId, // 🔥 from JWT (NOT from body)
       },
     });
+
+
+    try {
+      const hrs = parseInt(time.split(":")[0]);
+      const min = parseInt(time.split(":")[1]);
+      const scheduleId = schedule.id;
+
+      await scheduleCall(scheduleId,hrs,min,label)
+
+    } catch (error) {
+
+      return res.status(400).json({success: false, message: "Server side error, please contact the owner of the site"+JSON.stringify(error)})
+
+    }
 
     return res.json({ success: true, schedule });
 
