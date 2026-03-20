@@ -175,7 +175,7 @@ router.get("/avaliablecalls", async (req, res) => {
   try {
     const data = await client.balance.fetch();
     console.log(`Your account balance is ${data.balance} ${data.currency}.`);
-    const costPerCall = 0.05;
+    const costPerCall = 0.01;
     res.json({
       success: true,
       balance: data.balance,
