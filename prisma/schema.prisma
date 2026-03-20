@@ -77,3 +77,27 @@ enum Intent {
   NO
   UNKNOWN
 }
+
+model Otp {
+  id        Int      @id @default(autoincrement())
+
+  phone     String   // primary identifier
+  code      String   // hashed OTP
+
+  purpose   OtpPurpose
+
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+
+  attempts  Int      @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}
+
+enum OtpPurpose {
+  LOGIN
+  REGISTER
+  RESET_PASSWORD
+}

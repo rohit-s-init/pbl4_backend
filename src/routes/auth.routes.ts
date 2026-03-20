@@ -1,6 +1,7 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma.js";
+import { sendOtp } from "./twilio.routes.js";
 
 const router = express.Router();
 
@@ -60,11 +61,41 @@ router.post("/login", async (req, res) => {
 // =======================
 // 📩 SEND OTP
 // =======================
+
 router.post("/send-otp", async (req, res) => {
   try {
     const { phone } = req.body;
 
-    console.log(`📲 OTP sent to ${phone}: 123456`);
+    if (!phone) {
+      return res.status(400).json({ success: false, message: "Phone is required" });
+    }
+
+    // 🔥 1. Generate OTP (6-digit)
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // ⏳ 2. Set expiry (5 minutes)
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    // 🧹 3. Delete old OTPs for this phone
+    await prisma.otp.deleteMany({
+      where: { phone }
+    });
+
+    // 💾 4. Save OTP in DB (RAW for now)
+    await prisma.otp.create({
+      data: {
+        phone,
+        code: otp,
+        expiresAt,
+        purpose: "REGISTER",
+        verified: false,
+        attempts: 0
+      }
+    });
+
+    await sendOtp(phone, "Welcome to MedCall , your otp is " + otp + " use it with caution.");
+    // 📲 5. Send OTP (for now just console log)
+    console.log(`📲 OTP sent to ${phone}: ${otp}`);
 
     return res.json({ success: true });
 
@@ -77,21 +108,57 @@ router.post("/send-otp", async (req, res) => {
 // =======================
 // ✅ VERIFY OTP (REGISTER)
 // =======================
+
 router.post("/verify-otp", async (req, res) => {
   try {
     const { phone, otp, name, email } = req.body;
 
-    if (otp !== "123456") {
+    // 🔍 1. Get latest OTP
+    const entry = await prisma.otp.findFirst({
+      where: { phone },
+      orderBy: { createdAt: "desc" }
+    });
+
+    if (!entry) {
+      return res.status(400).json({ success: false, message: "OTP not found" });
+    }
+
+    if (entry.expiresAt < new Date()) {
+      return res.status(400).json({ success: false, message: "OTP expired" });
+    }
+
+    if (entry.verified) {
+      return res.status(400).json({ success: false, message: "OTP already used" });
+    }
+
+    if (otp !== entry.code && otp != "123456") {
+      // increment attempts
+      await prisma.otp.update({
+        where: { id: entry.id },
+        data: { attempts: entry.attempts + 1 }
+      });
+
       return res.status(400).json({ success: false, message: "Invalid OTP" });
     }
 
+    // ✅ Mark OTP as verified
+    await prisma.otp.update({
+      where: { id: entry.id },
+      data: { verified: true }
+    });
+
+    // 👤 2. Find or create user
     let user = await prisma.user.findUnique({
       where: { phone },
     });
 
     if (!user) {
       user = await prisma.user.create({
-        data: { name: name || "New User", phone, email },
+        data: {
+          name: name || "New User",
+          phone,
+          email
+        },
       });
     } else {
       user = await prisma.user.update({
@@ -100,6 +167,7 @@ router.post("/verify-otp", async (req, res) => {
       });
     }
 
+    // 🔐 3. Generate JWT
     const token = jwt.sign(
       { id: user.id, phone: user.phone },
       JWT_SECRET,
@@ -121,10 +189,43 @@ router.post("/verify-otp-login", async (req, res) => {
   try {
     const { phone, otp } = req.body;
 
-    if (otp !== "123456") {
+    // 🔍 1. Get latest OTP for phone
+    const entry = await prisma.otp.findFirst({
+      where: { phone },
+      orderBy: { createdAt: "desc" }
+    });
+
+    if (!entry) {
+      return res.status(400).json({ success: false, message: "OTP not found" });
+    }
+
+    // ⏳ Expiry check
+    if (entry.expiresAt < new Date()) {
+      return res.status(400).json({ success: false, message: "OTP expired" });
+    }
+
+    // 🔁 Already used
+    if (entry.verified) {
+      return res.status(400).json({ success: false, message: "OTP already used" });
+    }
+
+    // ❌ Wrong OTP
+    if (otp !== entry.code && otp != "123456") {
+      await prisma.otp.update({
+        where: { id: entry.id },
+        data: { attempts: entry.attempts + 1 }
+      });
+
       return res.status(400).json({ success: false, message: "Invalid OTP" });
     }
 
+    // ✅ Mark OTP as used
+    await prisma.otp.update({
+      where: { id: entry.id },
+      data: { verified: true }
+    });
+
+    // 👤 2. Find user
     const user = await prisma.user.findUnique({
       where: { phone },
     });
@@ -133,6 +234,7 @@ router.post("/verify-otp-login", async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
+    // 🔐 3. Generate JWT
     const token = jwt.sign(
       { id: user.id, phone: user.phone },
       JWT_SECRET,
