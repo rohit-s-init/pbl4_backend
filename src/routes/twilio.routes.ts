@@ -92,7 +92,7 @@ router.post("/voice", async (req, res) => {
     twiml.gather({
       input: ["dtmf"],
       numDigits: 1,
-      action: `/twilio/gather?callId=${callId}`,
+      action: `${process.env.BASE_UR}/twilio/gather?callId=${callId}`,
       method: "POST",
       timeout: 5,
     }).say("Press 1 if you have taken your medicine, or press 2 if not.");
@@ -129,7 +129,7 @@ router.post("/gather", async (req, res) => {
       twiml.gather({
         input: ["dtmf"],
         numDigits: 1,
-        action: `/twilio/gather?callId=${callId}`,
+        action: `${process.env.BASE_UR}/twilio/gather?callId=${callId}`,
         method: "POST",
       });
 
