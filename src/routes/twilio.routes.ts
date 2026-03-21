@@ -16,7 +16,7 @@ export function sendOtp(num: string, message: string) {
   return client.messages
     .create({
       body: message,
-      from: '+17018952445',
+      from: process.env.TWILIO_PHONE_NUMBER!,
       to: num
     })
 }
